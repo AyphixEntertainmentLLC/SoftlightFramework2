@@ -117,7 +117,10 @@ class IdentifierReader {
             "\t",
             "\n",
             "\r",
-            ";"
+            ";",
+            "=",
+            "?",
+            ":"
         );
         $escaped = false;
         while(!$escaped) {
@@ -186,6 +189,7 @@ class Lexer {
     	        case ":":
     	        case "+":
     	        case ";":
+    	        case "=":
     	            $this->add_token(new Token("Operator", $ch, "Operator"));
     	            break;
     	        default:
@@ -205,6 +209,8 @@ class Lexer {
     	            break;
     	    }
     	}
+    	
+    	var_dump($this->tokens);
     	
     	return $this;
 	}
@@ -247,7 +253,7 @@ class Lexer {
 	                $output .= $token->value;
 	                break;
 	            case "Boolean":
-	                $output = ($token->value === 0) ? "false" : "true";
+	                $output .= ($token->value === 0) ? "false" : "true";
 	                break;
 	        }
 	    }
