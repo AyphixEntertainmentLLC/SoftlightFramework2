@@ -9,6 +9,10 @@ class Token {
 	public $type;
 
 	public $global;
+	
+	public $left;
+	
+	public $right;
 
 	public function __construct($name, $value, $type, $global = false) {
 		$this->name = $name;
@@ -101,6 +105,37 @@ class StringReader {
     }
 }
 
+class IdentifierReader {
+    public static function ReadIdentifier($first, $input, $global = false) {
+        $identifier = $first;
+        $escapes = array(
+            "(",
+            ")",
+            ".",
+            ",",
+            " ",
+            "\t",
+            "\n",
+            "\r",
+            ";"
+        );
+        $escaped = false;
+        while(!$escaped) {
+            $ch = $input->next();
+            if(ctype_alnum($ch) || $ch == "_") {
+                $identifier .= $ch;
+            } else if(in_array($ch, $escapes) || $ch === null) {
+                $input->index -= 1;
+                $escaped = true;
+                continue;
+            } else {
+                show_error("Unexpected character: " . $ch .  " at line: 1, character: " . $input->index, 200, "Lexing Error!");
+            }
+        }
+        return new Token("Identifier", $identifier, "Identifier", $global);
+    }
+}
+
 class Lexer {
     private $input;
     
@@ -113,6 +148,13 @@ class Lexer {
 	    array_push($this->tokens, $token);
 	}
 	
+	public function get_left() {
+	    if(isset($this->tokens[count($this->tokens) - 1])) {
+	        return $this->tokens[count($this->tokens) - 1];
+	    }
+	    return null;
+	}
+	
 	public function tokenize() {
 	    
     	while(($ch = $this->input->next()) !== null) {
@@ -120,6 +162,7 @@ class Lexer {
     	    switch($ch) {
     	        case "":
     	        case " ":
+    	        case "\r":
     	        case "\t":
     	        case "\n":
     	            continue;
@@ -127,11 +170,23 @@ class Lexer {
     	            $token = StringReader::ReadString($this->input);
     	            $this->add_token($token);
     	            break;
-    	        case "$":
-    	            
-    	            break;
     	        case ".":
-    	            
+    	            $this->add_token(new Token("Accessor","->","Accessor"));
+    	            break;
+    	        case "$":
+    	            $token = IdentifierReader::ReadIdentifier($this->input, true);
+    	            $token->left = $this->get_left();
+    	            $this->add_token($token);
+    	            break;
+    	        case "?":
+    	        case "(":
+    	        case ")":
+    	        case "_":
+    	        case "-":
+    	        case ":":
+    	        case "+":
+    	        case ";":
+    	            $this->add_token(new Token("Operator", $ch, "Operator"));
     	            break;
     	        default:
     	            if($this->input->peek_string("true")) {
@@ -143,6 +198,10 @@ class Lexer {
     	                $this->add_token(new Token("False", 0, "Boolean"));
     	                continue;
     	            }
+    	            
+    	            $token = IdentifierReader::ReadIdentifier($ch, $this->input, false);
+    	            $token->left = $this->get_left();
+    	            $this->add_token($token);
     	            break;
     	    }
     	}
@@ -157,10 +216,43 @@ class Lexer {
 	            case "String":
 	                $output .= "'".$token->value."'";
 	                break;
+	            case "Global":
+	                $output .= '$this->globals->'.$token->value;
+	                break;
+	            case "Accessor":
+	                $output .= "->";
+	                break;
+	            case "Identifier":
+	                if($token->global) {
+	                    if(isset($token->left)) {
+	                        if(!$token->left->type != "Accessor") {
+	                            $output .= '$inst->globals->';
+	                        }
+	                    } else {
+	                        $output .= '$inst->globals->';
+	                    }
+	                    $output .= '$inst->globals->'.$token->value;
+	                }else{
+	                    if(isset($token->left)) {
+	                        if($token->left->type != "Accessor") {
+	                            $output .= '$inst->';
+	                        }
+	                    } else {
+	                        $output .= '$inst->';
+	                    }
+	                    $output .= $token->value;
+	                }
+	                break;
+	            case "Operator":
+	                $output .= $token->value;
+	                break;
 	            case "Boolean":
 	                $output = ($token->value === 0) ? "false" : "true";
 	                break;
 	        }
+	    }
+	    if($output[strlen($output) - 1] != ";") {
+	        $output .= ";";
 	    }
 	    return $output;
 	}
