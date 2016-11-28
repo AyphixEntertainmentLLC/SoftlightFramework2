@@ -210,8 +210,6 @@ class Lexer {
     	    }
     	}
     	
-    	var_dump($this->tokens);
-    	
     	return $this;
 	}
 	
@@ -276,7 +274,6 @@ class Scripting {
     }
 	
 	public function evaluate($code, $inst, $return = true, $vars = array()) {
-		log_message("info", $this->tokenize($code));
 		return call_user_func(function() use($code, $inst, $vars, $return) {
 			$vars_exp = "";
 			foreach($vars as $k => $v) {
