@@ -113,6 +113,49 @@ class StringReader {
     }
 }
 
+class NumberReader {
+    public static function ReadNumber($first, $input) {
+        $is_float = false;
+        $number = $first;
+        $escapes = array(
+            "(",
+            ")",
+            ",",
+            " ",
+            "\t",
+            "\n",
+            "\r",
+            ";",
+            "=",
+            "?",
+            ":",
+            "+",
+        );
+        $escaped = false;
+        while(!$escaped) {
+            $ch = $input->next();
+            if(is_numeric($ch)) {
+                $number .= $ch;
+            } else if($ch === ".") {
+                $is_float = true;
+                $number .= ".";
+                continue;
+            } else if(in_array($ch, $escapes) || $ch === null) {
+                $input->index -= 1;
+                $escaped = true;
+                continue;
+            } else {
+                show_error("Unexpected character: " . $ch .  " expected number at line: 1, character: " . $input->index, 200, "Lexing Error!");
+            }
+        }
+        if($is_float) {
+            return new Token("Float", $number, "Number");
+        } else {
+            return new Token("Integer", $number, "Number");
+        }
+    }
+}
+
 class IdentifierReader {
     public static function ReadIdentifier($first, $input, $global = false) {
         $identifier = $first;
@@ -128,7 +171,8 @@ class IdentifierReader {
             ";",
             "=",
             "?",
-            ":"
+            ":",
+            "+",
         );
         $escaped = false;
         while(!$escaped) {
@@ -204,7 +248,6 @@ class Lexer {
     	            break;
     	        case "$":
     	            $token = IdentifierReader::ReadIdentifier($this->input, true);
-    	            $token->left = $this->get_left();
     	            $this->add_token($token);
     	            break;
     	        case "?":
@@ -229,8 +272,15 @@ class Lexer {
     	                continue;
     	            }
     	            
-    	            $token = IdentifierReader::ReadIdentifier($ch, $this->input, false);
-    	            $this->add_token($token);
+    	            if(is_numeric($ch)) {
+    	                $token = NumberReader::ReadNumber($ch, $this->input, false);
+        	            $this->add_token($token);
+    	            }
+    	            
+    	            if(ctype_alpha($ch)) {
+        	            $token = IdentifierReader::ReadIdentifier($ch, $this->input, false);
+        	            $this->add_token($token);
+    	            }
     	            break;
     	    }
     	    $this->update();
@@ -243,7 +293,7 @@ class Lexer {
 	public function is_concat($token) {
 	    if($token->value == "+") {
     	    if(isset($token->left) && isset($token->right)) {
-    	        if($token->left->type == "String" && $token->right->type == "String") {
+    	        if(($token->left->type == "String" && $token->right->type == "String") || $token->right->value == "=") {
     	            return true;
     	        }else{
     	            return false;
@@ -290,6 +340,9 @@ class Lexer {
 	                    $output .= $token->value;
 	                }
 	                break;
+    	        case "Number":
+    	            $output .= $token->value;
+    	            break;
 	            case "Operator":
 	                if($this->is_concat($token)) {
 	                    $output .= ".";

@@ -7,6 +7,6 @@ class Script extends CI_Controller {
     }
 
     public function index() {
-        $this->scripting->tokenize("'text'+'text2'");
+        $this->scripting->tokenize("2.2+2=4.2");
     }
 }
