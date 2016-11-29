@@ -241,7 +241,6 @@ class Lexer {
 	}
 	
 	public function is_concat($token) {
-	    var_dump($token);
 	    if($token->value == "+") {
     	    if(isset($token->left) && isset($token->right)) {
     	        if($token->left->type == "String" && $token->right->type == "String") {
