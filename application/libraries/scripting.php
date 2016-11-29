@@ -20,6 +20,14 @@ class Token {
 		$this->type = $type;
 		$this->global = $global;
 	}
+	
+	public function set_left($token) {
+	    $this->left = $token;
+	}
+	
+	public function set_right($token) {
+	    $this->right = $token;
+	}
 }
 
 class InputStream {
@@ -152,10 +160,28 @@ class Lexer {
 	}
 	
 	public function get_left() {
+	    if(isset($this->tokens[count($this->tokens) - 2])) {
+	        return $this->tokens[count($this->tokens) - 2];
+	    }
+	    return null;
+	}
+	
+	public function current_token() {
 	    if(isset($this->tokens[count($this->tokens) - 1])) {
 	        return $this->tokens[count($this->tokens) - 1];
 	    }
 	    return null;
+	}
+	
+	public function update() {
+	    $token = $this->get_left();
+	    $current = $this->current_token();
+	    if(isset($current)) {
+	        $current->set_left($token);
+	    }
+	    if(isset($token)) {
+	        $token->set_right($current);
+	    }
 	}
 	
 	public function tokenize() {
@@ -204,13 +230,31 @@ class Lexer {
     	            }
     	            
     	            $token = IdentifierReader::ReadIdentifier($ch, $this->input, false);
-    	            $token->left = $this->get_left();
     	            $this->add_token($token);
     	            break;
     	    }
+    	    $this->update();
     	}
     	
+    	
     	return $this;
+	}
+	
+	public function is_concat($token) {
+	    var_dump($token);
+	    if($token->value == "+") {
+    	    if(isset($token->left) && isset($token->right)) {
+    	        if($token->left->type == "String" && $token->right->type == "String") {
+    	            return true;
+    	        }else{
+    	            return false;
+    	        }
+    	    }else{
+    	        return false;
+    	    }
+	    }else{
+	        return false;
+	    }
 	}
 	
 	public function __toString() {
@@ -248,7 +292,11 @@ class Lexer {
 	                }
 	                break;
 	            case "Operator":
-	                $output .= $token->value;
+	                if($this->is_concat($token)) {
+	                    $output .= ".";
+	                }else{
+	                    $output .= $token->value;
+	                }
 	                break;
 	            case "Boolean":
 	                $output .= ($token->value === 0) ? "false" : "true";
