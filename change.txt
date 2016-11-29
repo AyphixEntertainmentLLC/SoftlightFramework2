@@ -1,0 +1,3 @@
+Changelog 1.01
+    - sl-script parse numbers and floats (no scientific notaion)
+    - modified Main.php to be a mini show-case for the skinning system
