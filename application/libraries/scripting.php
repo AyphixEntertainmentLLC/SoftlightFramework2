@@ -85,7 +85,8 @@ class StringReader {
     public static function ReadString($input) {
         $escape = false;
         $string = "";
-        while(($ch = $input->next()) !== null) {
+		$ch = $input->next();
+        while($ch !== null) {
             if(!$escape && $ch == "'") {
                 return new Token("String", $string, "String");
             } else if($escape) {
@@ -105,7 +106,8 @@ class StringReader {
                 }
                 
                 $string .= $ch;
-            }
+            }			
+        	$ch = $input->next();
         }
         show_error: {
             show_error("Unterminated string literal at line: 1, character: " . $input->index. ", input: '" . $string,"200","Lexing Error!");
@@ -173,6 +175,7 @@ class IdentifierReader {
             "?",
             ":",
             "+",
+            "-",
         );
         $escaped = false;
         while(!$escaped) {
@@ -193,10 +196,12 @@ class IdentifierReader {
 
 class Lexer {
     private $input;
+	private $inst;
     
-	public function __construct($stream) {
+	public function __construct($stream, $inst) {
 	    $this->input = $stream;
 	    $this->tokens = array();
+		$this->inst = $inst;
 	}
 	
 	public function add_token($token) {
@@ -229,8 +234,10 @@ class Lexer {
 	}
 	
 	public function tokenize() {
-	    
-    	while(($ch = $this->input->next()) !== null) {
+		$ch = $this->input->next();
+    	while($ch !== null) {
+    		//var_dump($this->input);
+    		//echo "<br/>".$ch."<br/>";
     	    $token = null;
     	    switch($ch) {
     	        case "":
@@ -243,9 +250,16 @@ class Lexer {
     	            $token = StringReader::ReadString($this->input);
     	            $this->add_token($token);
     	            break;
-    	        case ".":
+    	        case "-":
+					if($this->input->peek() != ">") {
+						break;
+					}
+					$this->input->next();
     	            $this->add_token(new Token("Accessor","->","Accessor"));
     	            break;
+				case ".":
+					$this->add_token(new Token("Operator",".","Concatenation"));
+					break;
     	        case "$":
     	            $token = IdentifierReader::ReadIdentifier($this->input, true);
     	            $this->add_token($token);
@@ -259,6 +273,9 @@ class Lexer {
     	        case "+":
     	        case ";":
     	        case "=":
+				case ">":
+				case "<":
+				case "!":
     	            $this->add_token(new Token("Operator", $ch, "Operator"));
     	            break;
     	        default:
@@ -283,31 +300,46 @@ class Lexer {
     	            }
     	            break;
     	    }
-    	    $this->update();
+    	    $this->update();			
+    		$ch = $this->input->next();
     	}
     	
     	
     	return $this;
 	}
-	
-	public function is_concat($token) {
-	    if($token->value == "+") {
-    	    if(isset($token->left) && isset($token->right)) {
-    	        if(($token->left->type == "String" || $token->right->type == "String") || $token->right->value == "=") {
-    	            return true;
-    	        }else{
-    	            return false;
-    	        }
-    	    }else{
-    	        return false;
-    	    }
-	    }else{
-	        return false;
-	    }
+
+	public function handle_ident($token) {
+		if(isset($token->right)) {
+			if($token->right->type == "Operator" && $token->right->value == "=") {
+				return '$inst->'.$token->value;
+			}
+		}
+		
+		if(isset($token->left)) {
+			if($token->left->type == "Accessor" && $token->left->value == "->") {
+				return $token->value;
+			}
+			
+			if($token->left->type == "Operator" && $token->left->value == "=") {
+				return '$inst->'.$token->value;
+			}
+			
+			if(isset($this->inst->{$token->value})) {
+				return '$inst->'.$token->value;
+			} else{
+				return '$'.$token->value;
+			}
+		}else{
+			return '$inst->'.$token->value;
+		}
 	}
 	
 	public function __toString() {
 	    $output = "";
+		//echo "<pre>";
+		//var_dump($this->tokens);
+		//echo "</pre>";
+		//echo "<br/>";
 	    foreach($this->tokens as $token) {
 	        switch($token->type) {
 	            case "String":
@@ -320,35 +352,16 @@ class Lexer {
 	                $output .= "->";
 	                break;
 	            case "Identifier":
-	                if($token->global) {
-	                    if(isset($token->left)) {
-	                        if(!$token->left->type != "Accessor") {
-	                            $output .= '$inst->globals->';
-	                        }
-	                    } else {
-	                        $output .= '$inst->globals->';
-	                    }
-	                    $output .= '$inst->globals->'.$token->value;
-	                }else{
-	                    if(isset($token->left)) {
-	                        if($token->left->type != "Accessor") {
-	                            $output .= '$inst->';
-	                        }
-	                    } else {
-	                        $output .= '$inst->';
-	                    }
-	                    $output .= $token->value;
-	                }
+	                $output .= $this->handle_ident($token);
 	                break;
     	        case "Number":
     	            $output .= $token->value;
     	            break;
+				case "Concatenation":
+					$output .= $token->value;
+					break;
 	            case "Operator":
-	                if($this->is_concat($token)) {
-	                    $output .= ".";
-	                }else{
-	                    $output .= $token->value;
-	                }
+	                	$output .= $token->value;
 	                break;
 	            case "Boolean":
 	                $output .= ($token->value === 0) ? "false" : "true";
@@ -367,20 +380,28 @@ class Scripting {
         $this->i =& get_instance();
     }
     
-    public function tokenize($string) {
+    public function tokenize($string, $inst) {
     	$this->input = new InputStream($string);
-    	$this->lexer = new Lexer($this->input);
-    	echo $this->lexer->tokenize();
+    	$this->lexer = new Lexer($this->input, $inst);
+    	return $this->lexer->tokenize();
     }
 	
-	public function evaluate($code, $inst, $return = true, $vars = array()) {
-		return call_user_func(function() use($code, $inst, $vars, $return) {
-			$vars_exp = "";
-			foreach($vars as $k => $v) {
-				$vars_exp .= "$".$k . "=" . var_export($b) . ";";
+	public function evaluate($code, $inst, $vars = array(), $return = true) {
+		if(!isset($vars)) {
+			$vars = array();
+		}
+		return call_user_func(function() use($code, $inst, $vars, $return) {			
+			$php = $this->tokenize($code, $inst);
+			
+			//echo $php."<br/>";
+			
+			$exp = "";
+			
+			foreach($vars as $key => $value) {
+				$exp .= '$'.$key."=".var_export($value).";";
 			}
-			//echo 'return ' . $vars_exp . ' ' . $code . ';';
-			return eval((($return) ? 'return ': '') . $vars_exp . ' ' . $code . ';');
+			
+			return eval((($return) ? 'return ': '') . $exp . $php . ';');
 		});
 	}
 }

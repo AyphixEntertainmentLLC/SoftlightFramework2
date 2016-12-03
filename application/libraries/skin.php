@@ -59,7 +59,7 @@ class Skin {
         $this->blocks = $this->i->config->item("blocks");
         
         // Load the base Model class (this allows the other classes to load without errors)
-        $this->i->load->model("block");
+        $this->i->load->model("Block");
         
         // Foreach through our blocks and load them
         foreach($this->blocks as $block) {
@@ -183,7 +183,7 @@ class Skin {
         	$expr = $node->getAttribute("sl-init");
 			$node->removeAttribute("sl-init");
 			
-			$this->i->scripting->evaluate($expr, $this->controller, false);
+			$this->i->scripting->evaluate($expr, $this->controller, null, false);
         }
         
         if($node->hasAttribute("sl-repeat")) {
@@ -258,8 +258,7 @@ class Skin {
                                 } else {
                                     $p = $expr;
                                     
-                                    $ip = $$p;
-                                    
+                                    $ip = $$p;                                    
                                     
                                     if(is_object($ip)) {
                                         if(property_exists($ip->{$p}, $p)) {
@@ -322,6 +321,7 @@ class Skin {
         // Check to see if the current tag is a block
         if(in_array($name, $this->blocks)) {
             // Run our block
+            $this->i->$name->set_skin($this->skin);
             $this->i->$name->run($node);
             
             // Tell our traverser that the current node is a block

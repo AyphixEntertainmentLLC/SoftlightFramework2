@@ -1,6 +1,8 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Block extends CI_Model {
+	
+	private $skin_name;
     
     public function __construct() {
         parent::__construct();
@@ -28,7 +30,7 @@ class Block extends CI_Model {
         	$expr = $node->getAttribute("sl-init");
 			$node->removeAttribute("sl-init");
 			
-			$this->i->scripting->evaluate($expr, $this, false);
+			$this->i->scripting->evaluate($expr, $this, null, false);
         }
 				
         if($node->hasAttribute("sl-repeat")) {
@@ -129,6 +131,10 @@ class Block extends CI_Model {
 			}
 		}
     }
+
+	public function load_view($file) {
+		return $this->load->view("blocks/".$this->skin_name."/".$file, null, true);
+	}
     
     public function parse_node($node) {
         // echo $node->tag;
@@ -151,10 +157,93 @@ class Block extends CI_Model {
             $this->$name->run($node);
         }
     }
+    
+	public function set_skin($skin) {
+		$this->skin_name = $skin;
+	}
+	
+	private function controller_get($name){
+        $exp = explode(".", $name);
+        $last = null;
+        if(count($exp) < 1) {
+            return $this->{$name};
+        }else{
+            $last = $this;
+            foreach($exp as $var) {
+                $last = $last->{$var};
+            }
+        }
         
-    public function run($node) {
+        return $last;
+    }
+    
+    private function controller_has($name) {
+        $exp = explode(".", $name);
+        $last = null;
+        if(count($exp) < 1) {
+            if(isset($this->{$name})) {
+                return true;
+            } else{
+                return false;
+            }
+        }else{
+            $last = $this;
+            foreach($exp as $var) {
+                if(!isset($last->{$var})){
+                    return false;
+                }
+                $last = $last->{$var};
+            }
+            
+            return true;
+        }
+    }
+	
+	public function run($node) {
+		// Pass this to our decendants
+	}
+        
+    public function call($node, $view = null) {
         // Traverse through the block but skip the root element so
         // the root element doesn't try to run this block again in an inifite loop
-        $this->traverse($node, true);
+        
+        $output = "";
+        
+        if($view != null) {
+        	$html = new simple_html_dom();
+			$html->load($view);
+        	$this->traverse($html->root);
+			$output = $html->save();
+        } else {
+        	$this->traverse($node, true);
+			
+			$output = $node->outertext;
+		}
+		
+		$max_matches = 300;
+        $match_num = 0;
+        $match = array();
+        preg_match("/\{\{.*?\}\}/", $output, $match, PREG_OFFSET_CAPTURE);
+        if(count($match) > 0) {
+            do {
+                $expr = substr($match[0][0], 2, strlen($match[0][0]) - 4);
+                
+                if($this->controller_has($expr)){
+                    $v = $this->controller_get($expr);
+                }else if($this->i->globals->has($expr)) {
+                    //$v = $this->i->globals->{$p}->{$n};
+                    $v = $this->i->globals->get($expr);
+                }else{
+                    $v = "[SLF Error: No property " . $expr . " found.]";
+                }
+                
+                
+                $output = substr_replace($output, $v, $match[0][1], strlen($match[0][0]));
+                preg_match("/\{\{.*?\}\}/", $output, $match, PREG_OFFSET_CAPTURE);
+                ++$match_num;
+            } while (count($match) > 0 && $match_num < $max_matches);
+        }
+		
+		return $output;
     }
 }
