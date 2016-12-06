@@ -100,9 +100,10 @@ class Skin {
         $max_matches = 300;
         $match_num = 0;
         $match = array();
-        preg_match("/\{\{.*?\}\}/", $output, $match, PREG_OFFSET_CAPTURE);
+        preg_match("/\{\:.*?\:\}/", $output, $match, PREG_OFFSET_CAPTURE);
         if(count($match) > 0) {
             do {
+            	if(!isset($match[0][0])) { continue; }
                 $expr = substr($match[0][0], 2, strlen($match[0][0]) - 4);
                 
                 if($this->controller_has($expr)){
@@ -116,7 +117,7 @@ class Skin {
                 
                 
                 $output = substr_replace($output, $v, $match[0][1], strlen($match[0][0]));
-                preg_match("/\{\{.*?\}\}/", $output, $match, PREG_OFFSET_CAPTURE);
+                preg_match("/\{\:.*?\:\}/", $output, $match, PREG_OFFSET_CAPTURE);
                 ++$match_num;
             } while (count($match) > 0 && $match_num < $max_matches);
         }
@@ -234,9 +235,10 @@ class Skin {
                         $max_matches = 300;
                         $match_num = 0;
                         $match = array();
-                        preg_match("/\{\{.*?\}\}/", $parsed, $match, PREG_OFFSET_CAPTURE);
+                        preg_match("/\{\:.*?\:\}/", $parsed, $match, PREG_OFFSET_CAPTURE);
                         if(count($match) > 0) {
                             do {
+                            	if(!isset($match[0][0])) { continue; }
                                 $expr = substr($match[0][0], 2, strlen($match[0][0]) - 4);
                                 $ex   = explode(".", $expr);
                                 $v    = null;
@@ -272,7 +274,7 @@ class Skin {
                                 }
                                 
                                 $parsed = substr_replace($parsed, $v, $match[0][1], strlen($match[0][0]));
-                                preg_match("/\{\{.*?\}\}/", $parsed, $match, PREG_OFFSET_CAPTURE);
+                                preg_match("/\{\:.*?\:\}/", $parsed, $match, PREG_OFFSET_CAPTURE);
                                 ++$match_num;
                             } while(count($match) > 0 && $match_num < $max_matches);
                             $repeated .= $parsed;
