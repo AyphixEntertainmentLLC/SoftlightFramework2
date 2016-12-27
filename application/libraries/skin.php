@@ -17,6 +17,8 @@ class Skin {
         $this->content = "";
         // This will hold the skin that the user selected
         $this->skin = "";
+        
+        $this->locals = new stdClass();
     }
     
     public function redirect($url, $time) {
@@ -175,7 +177,7 @@ class Skin {
     }
 	
 	private function sl_hide($expr, $controller) {
-		return $this->i->scripting->evaluate($expr, $controller);
+		return $this->i->scripting->evaluate($expr, $controller, $this->locals);
 	}
     
     private function check_attributes($node) {
@@ -184,7 +186,7 @@ class Skin {
         	$expr = $node->getAttribute("sl-init");
 			$node->removeAttribute("sl-init");
 			
-			$this->i->scripting->evaluate($expr, $this->controller, null, false);
+			$this->i->scripting->evaluate($expr, $this->controller, $this->locals, false);
         }
         
         if($node->hasAttribute("sl-repeat")) {
@@ -195,7 +197,7 @@ class Skin {
 			if($node->hasAttribute("sl-hide")) {
 				$expr = $node->getAttribute("sl-hide");
 				$node->removeAttribute("sl-hide");
-				if($this->sl_hide($expr, $this->controller)) {
+				if($this->sl_hide($expr, $this->controller, $this->locals)) {
 					$node->outertext = "";
 					return;
 				}
@@ -231,6 +233,7 @@ class Skin {
                     }
                     $repeated = "";
                     foreach($arr as $$var) {
+                        $this->locals->{$var} = $$var;
                         $parsed = $outer;
                         $max_matches = 300;
                         $match_num = 0;
@@ -281,6 +284,8 @@ class Skin {
                         }else{
                             $repeated .= $outer;
                         }
+                        
+                        unset($this->locals->{$var});
                     }
                     // Replace the original tag with the repeated code
                     $node->outertext = "<!-- START SL-REPEAT: " . $prop . " -->\n" . $repeated . "<!-- END SL-REPEAT: " . $prop . " -->";
