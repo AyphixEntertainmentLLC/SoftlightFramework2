@@ -327,7 +327,7 @@ class Lexer {
 			if(isset($this->inst->{$token->value})) {
 				return '$inst->'.$token->value;
 			} else{
-				return '$'.$token->value;
+				return '$locals->'.$token->value;
 			}
 		}else{
 			return '$inst->'.$token->value;
@@ -368,9 +368,13 @@ class Lexer {
 	                break;
 	        }
 	    }
-	    if($output[strlen($output) - 1] != ";") {
-	        $output .= ";";
-	    }
+       
+       if(strlen($output) > 0) {
+   	    if($output[strlen($output) - 1] != ";") {
+   	        $output .= ";";
+   	    }
+       }
+       
 	    return $output;
 	}
 }
@@ -386,22 +390,17 @@ class Scripting {
     	return $this->lexer->tokenize();
     }
 	
-	public function evaluate($code, $inst, $vars = array(), $return = true) {
+	public function evaluate($code, $inst, $locals = NULL, $return = true) {
 		if(!isset($vars)) {
 			$vars = array();
 		}
-		return call_user_func(function() use($code, $inst, $vars, $return) {			
+      
+		return call_user_func(function() use($code, $inst, $locals, $return) {			
 			$php = $this->tokenize($code, $inst);
 			
 			//echo $php."<br/>";
 			
-			$exp = "";
-			
-			foreach($vars as $key => $value) {
-				$exp .= '$'.$key."=".var_export($value).";";
-			}
-			
-			return eval((($return) ? 'return ': '') . $exp . $php . ';');
+			return eval((($return) ? 'return ': '') . $php . ';');
 		});
 	}
 }
