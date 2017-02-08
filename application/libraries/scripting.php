@@ -312,17 +312,17 @@ class Lexer {
 	}
 
 	public function handle_ident($token) {
-		if(isset($token->right)) {
+		/*if(isset($token->right) && isset($token->left)) {
 			if($token->right->type == "Operator" && $token->right->value == "=" && ($token->right->right->type != "Operator" && $token->right->right->value != "=") && ($token->left->type != "Accessor" && $token->left->value != "->")) {
 				return '$inst->'.$token->value;
 			}
-		}
+		}*/
 		
 		if($token->global) {
 			return '$inst->globals->'.substr($token->value, 1);
 		}
 		
-		if(isset($token->left)) {
+		if(isset($token->left) && $token->left->value != ";") {
 			if($token->left->type == "Accessor" && $token->left->value == "->") {
 				return $token->value;
 			}
@@ -344,9 +344,17 @@ class Lexer {
 			if(isset($this->locals->{$token->value})) {
 				return '$locals->'.$token->value;
 			} else {
-				if(isset($this->inst->{$token->value})) {
+				if(isset($this->inst->{$token->value})) {					
 					return '$inst->'.$token->value;
-				}							
+				}			
+				
+				if(isset($token->right)) {
+					if(isset($token->right->right)) {
+						if(($token->right->right->value != "=" || $token->right->right->value != "+"  || $token->right->right->value != "-" || $token->right->right->value != "*" || $token->right->right->value != "!") && $token->right->value == "=") {
+							return '$inst->'.$token->value;
+						}
+					}
+				}				
 				return $token->value;
 			}
 		}
