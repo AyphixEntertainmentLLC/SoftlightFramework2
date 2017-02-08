@@ -331,25 +331,23 @@ class Lexer {
 				return '$inst->'.$token->value;
 			}
 			
-			if(isset($this->inst->{$token->value})) {
-				return '$inst->'.$token->value;
-			} else{
-				if(isset($this->locals->{$token->value})) {
-					return '$locals->'.$token->value;
-				} else {
-					return $token->value;
-				}
+			if(isset($this->locals->{$token->value})) {
+				return '$locals->'.$token->value;
+			} else {
+				if(isset($this->inst->{$token->value})) {
+					return '$inst->'.$token->value;
+				}							
+				return $token->value;
 			}
 		}else{
 			//var_dump($this->inst);
-			if(isset($this->inst->{$token->value})) {
-				return '$inst->'.$token->value;
-			} else{
-				if(isset($this->locals->{$token->value})) {
-					return '$locals->'.$token->value;
-				} else {
-					return $token->value;
-				}
+			if(isset($this->locals->{$token->value})) {
+				return '$locals->'.$token->value;
+			} else {
+				if(isset($this->inst->{$token->value})) {
+					return '$inst->'.$token->value;
+				}							
+				return $token->value;
 			}
 		}
 	}
@@ -421,7 +419,7 @@ class Scripting {
 			//echo $php."<br/>";
 			
 			$ret = null;
-				//echo $php."<br/>";
+			//echo $php."<br/>\n";
 			try {
 				$ret = eval((($return) ? 'return ': '') . $php . ';');
 			} catch(Exception $e) {
