@@ -98,6 +98,9 @@ class Skin {
         
         // Set the final output of the html
         $output = $this->html->save();
+		
+		/*echo($output);
+		die();*/
         
         $max_matches = 300;
         $match_num = 0;
@@ -108,17 +111,17 @@ class Skin {
             	if(!isset($match[0][0])) { continue; }
                 $expr = substr($match[0][0], 2, strlen($match[0][0]) - 4);
                 
-                if($this->controller_has($expr)){
+                /*if($this->controller_has($expr)){
                     $v = $this->controller_get($expr);
                 }else if($this->i->globals->has($expr)) {
                     //$v = $this->i->globals->{$p}->{$n};
                     $v = $this->i->globals->get($expr);
                 }else{
                     $v = "[SLF Error: No property " . $expr . " found.]";
-                }
+                }*/
                 
                 
-                $output = substr_replace($output, $v, $match[0][1], strlen($match[0][0]));
+                $output = substr_replace($output, $this->i->scripting->evaluate($expr, $inst, NULL, true), $match[0][1], strlen($match[0][0]));
                 preg_match("/\{\:.*?\:\}/", $output, $match, PREG_OFFSET_CAPTURE);
                 ++$match_num;
             } while (count($match) > 0 && $match_num < $max_matches);
@@ -243,7 +246,7 @@ class Skin {
                             do {
                             	if(!isset($match[0][0])) { continue; }
                                 $expr = substr($match[0][0], 2, strlen($match[0][0]) - 4);
-                                $ex   = explode(".", $expr);
+                                /*$ex   = explode(".", $expr);
                                 $v    = null;
                                 
                                 $p = null;
@@ -274,9 +277,9 @@ class Skin {
                                     }else{
                                         $v = $ip;
                                     }
-                                }
+                                }*/
                                 
-                                $parsed = substr_replace($parsed, $v, $match[0][1], strlen($match[0][0]));
+                                $parsed = substr_replace($parsed, $this->i->scripting->evaluate($expr, $this->inst, $this->locals, true), $match[0][1], strlen($match[0][0]));
                                 preg_match("/\{\:.*?\:\}/", $parsed, $match, PREG_OFFSET_CAPTURE);
                                 ++$match_num;
                             } while(count($match) > 0 && $match_num < $max_matches);

@@ -14,7 +14,7 @@ class Globals {
     }
     
     public function set($name, $value) {
-        $exp = explode(".", $name);
+        $exp = explode("->", $name);
         $last = null;
         if(count($exp) == 1) {
             $this->{$name} = $value;
@@ -34,7 +34,7 @@ class Globals {
     }
     
     public function get($name) {
-        $exp = explode(".", $name);
+        $exp = explode("->", $name);
         $last = null;
         if(count($exp) < 1) {
             return $this->{$name};
@@ -55,7 +55,7 @@ class Globals {
     }
     
     public function has($name) {
-        $exp = explode(".", $name);
+        $exp = explode("->", $name);
         $last = null;
         if(count($exp) < 1) {
             if(isset($this->{$name})) {

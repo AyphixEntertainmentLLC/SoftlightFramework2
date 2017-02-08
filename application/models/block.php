@@ -68,7 +68,7 @@ class Block extends CI_Model {
    							$expr = $node->getAttribute("sl-hide");
    							$node->removeAttribute("sl-hide");
    							if($this->sl_hide($expr, $this, array($var => $$var))) {
-                           $node->hidden = "true";
+                           		$node->hidden = "true";
    								$node->outertext = "";
    								return;
    							}
@@ -81,7 +81,7 @@ class Block extends CI_Model {
                      do {
                      	if(!isset($match[0][0])) { continue; }
                          $expr = substr($match[0][0], 2, strlen($match[0][0]) - 4);
-                         $ex   = explode(".", $expr);
+                         /*$ex   = explode(".", $expr);
                          $v    = null;
                          
                          $p = null;
@@ -108,9 +108,9 @@ class Block extends CI_Model {
                              } else {
                                  $v = "[SLF Error: No property " . $p . " found.]";
                              }
-                         }
+                         }*/
                          
-                         $parsed = substr_replace($parsed, $v, $match[0][1], strlen($match[0][0]));
+                         $parsed = substr_replace($parsed, $this->scripting->evaluate($expr, $this, $this->locals, true), $match[0][1], strlen($match[0][0]));
                          preg_match("/\{\:.*?\:\}/", $parsed, $match, PREG_OFFSET_CAPTURE);
                          ++$match_num;
                         } while(count($match) > 0 && $match_num < $max_matches);
@@ -238,17 +238,17 @@ class Block extends CI_Model {
 					break;
 				}
                 
-                if($this->controller_has($expr)){
+                /*if($this->controller_has($expr)){
                     $v = $this->controller_get($expr);
                 }else if($this->globals->has($expr)) {
                     //$v = $this->i->globals->{$p}->{$n};
                     $v = $this->globals->get($expr);
                 }else{
                     $v = "[SLF Error: No property " . $expr . " found.]";
-                }
+                }*/
                 
                 
-                $output = substr_replace($output, $v, $match[0][1], strlen($match[0][0]));
+                $output = substr_replace($output, $this->i->scripting->evaluate($expr, $this, NULL, true), $match[0][1], strlen($match[0][0]));
                 preg_match("/\{\:.*?\:\}/", $output, $match, PREG_OFFSET_CAPTURE);
                 ++$match_num;
             } while (count($match) > 0 && $match_num < $max_matches);

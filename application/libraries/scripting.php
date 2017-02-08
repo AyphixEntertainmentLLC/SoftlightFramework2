@@ -87,7 +87,7 @@ class StringReader {
         $string = "";
 		$ch = $input->next();
         while($ch !== null) {
-            if(!$escape && $ch == "'") {
+            if(!$escape && ($ch == "'" || $ch == "\"")) {
                 return new Token("String", $string, "String");
             } else if($escape) {
                 $escape = false;
@@ -198,10 +198,11 @@ class Lexer {
     private $input;
 	private $inst;
     
-	public function __construct($stream, $inst) {
+	public function __construct($stream, $inst, $locals) {
 	    $this->input = $stream;
 	    $this->tokens = array();
 		$this->inst = $inst;
+		$this->locals = $locals;
 	}
 	
 	public function add_token($token) {
@@ -246,6 +247,7 @@ class Lexer {
     	        case "\t":
     	        case "\n":
     	            continue;
+				case "\"":
     	        case "'":
     	            $token = StringReader::ReadString($this->input);
     	            $this->add_token($token);
@@ -261,7 +263,7 @@ class Lexer {
 					$this->add_token(new Token("Operator",".","Concatenation"));
 					break;
     	        case "$":
-    	            $token = IdentifierReader::ReadIdentifier($this->input, true);
+    	            $token = IdentifierReader::ReadIdentifier($ch, $this->input, true);
     	            $this->add_token($token);
     	            break;
     	        case "?":
@@ -276,6 +278,7 @@ class Lexer {
 				case ">":
 				case "<":
 				case "!":
+				case ",":
     	            $this->add_token(new Token("Operator", $ch, "Operator"));
     	            break;
     	        default:
@@ -310,9 +313,13 @@ class Lexer {
 
 	public function handle_ident($token) {
 		if(isset($token->right)) {
-			if($token->right->type == "Operator" && $token->right->value == "=") {
+			if($token->right->type == "Operator" && $token->right->value == "=" && ($token->right->right->type != "Operator" && $token->right->right->value != "=") && ($token->left->type != "Accessor" && $token->left->value != "->")) {
 				return '$inst->'.$token->value;
 			}
+		}
+		
+		if($token->global) {
+			return '$inst->globals->'.substr($token->value, 1);
 		}
 		
 		if(isset($token->left)) {
@@ -327,10 +334,23 @@ class Lexer {
 			if(isset($this->inst->{$token->value})) {
 				return '$inst->'.$token->value;
 			} else{
-				return '$locals->'.$token->value;
+				if(isset($this->locals->{$token->value})) {
+					return '$locals->'.$token->value;
+				} else {
+					return $token->value;
+				}
 			}
 		}else{
-			return '$inst->'.$token->value;
+			//var_dump($this->inst);
+			if(isset($this->inst->{$token->value})) {
+				return '$inst->'.$token->value;
+			} else{
+				if(isset($this->locals->{$token->value})) {
+					return '$locals->'.$token->value;
+				} else {
+					return $token->value;
+				}
+			}
 		}
 	}
 	
@@ -384,9 +404,9 @@ class Scripting {
         $this->i =& get_instance();
     }
     
-    public function tokenize($string, $inst) {
+    public function tokenize($string, $inst, $locals) {
     	$this->input = new InputStream($string);
-    	$this->lexer = new Lexer($this->input, $inst);
+    	$this->lexer = new Lexer($this->input, $inst, $locals);
     	return $this->lexer->tokenize();
     }
 	
@@ -396,11 +416,20 @@ class Scripting {
 		}
       
 		return call_user_func(function() use($code, $inst, $locals, $return) {			
-			$php = $this->tokenize($code, $inst);
+			$php = $this->tokenize($code, $inst, $locals);
 			
 			//echo $php."<br/>";
 			
-			return eval((($return) ? 'return ': '') . $php . ';');
+			$ret = null;
+				//echo $php."<br/>";
+			try {
+				$ret = eval((($return) ? 'return ': '') . $php . ';');
+			} catch(Exception $e) {
+				echo $php;
+				return null;
+			}
+			
+			return $ret;
 		});
 	}
 }
