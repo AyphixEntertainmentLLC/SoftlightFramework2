@@ -279,6 +279,7 @@ class Lexer {
 				case "<":
 				case "!":
 				case ",":
+				case "|":
     	            $this->add_token(new Token("Operator", $ch, "Operator"));
     	            break;
     	        default:
