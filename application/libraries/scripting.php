@@ -280,6 +280,7 @@ class Lexer {
 				case "!":
 				case ",":
 				case "|":
+				case "&":
     	            $this->add_token(new Token("Operator", $ch, "Operator"));
     	            break;
     	        default:
@@ -332,20 +333,20 @@ class Lexer {
 				return '$inst->'.$token->value;
 			}
 			
-			if(isset($this->locals->{$token->value})) {
+			if(isset($this->locals->{$token->value}) || method_exists($this->locals, $token->value)) {
 				return '$locals->'.$token->value;
 			} else {
-				if(isset($this->inst->{$token->value})) {
+				if(isset($this->inst->{$token->value}) || method_exists($this->inst, $token->value)) {
 					return '$inst->'.$token->value;
 				}							
 				return $token->value;
 			}
 		}else{
 			//var_dump($this->inst);
-			if(isset($this->locals->{$token->value})) {
+			if(isset($this->locals->{$token->value}) || method_exists($this->locals, $token->value)) {
 				return '$locals->'.$token->value;
 			} else {
-				if(isset($this->inst->{$token->value})) {					
+				if(isset($this->inst->{$token->value}) || method_exists($this->inst, $token->value)) {					
 					return '$inst->'.$token->value;
 				}			
 				
